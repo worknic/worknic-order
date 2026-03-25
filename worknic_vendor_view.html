@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>WORKNIC — 발주 확인</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --bg:       #F6F5F1;
+  --surface:  #FFFFFF;
+  --s2:       #EEEDE9;
+  --border:   #E0DED8;
+  --bdk:      #C8C6BF;
+  --text:     #17161A;
+  --t2:       #56534C;
+  --t3:       #9A9890;
+  --inv:      #FFFFFF;
+  --accent:   #17161A;
+  --yellow:   #C4930A;
+  --y-bg:     #FDF6E0;
+  --y-bd:     #DDB930;
+  --red:      #B33030;
+  --r-bg:     #FDF0EF;
+  --green:    #1E6B47;
+  --g-bg:     #EBF7F2;
+  --g-bd:     #85C9A8;
+  --sh:       0 2px 12px rgba(0,0,0,.07), 0 1px 3px rgba(0,0,0,.05);
+  --sh-lg:    0 8px 32px rgba(0,0,0,.1);
+  --r:        8px;
+  --font:     'Noto Sans KR', sans-serif;
+  --mono:     'DM Mono', monospace;
+}
+
+html,body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  font-size:15px;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── LOADING ── */
+#loading{
+  position:fixed;inset:0;
+  background:var(--bg);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  z-index:999;gap:16px;
+}
+.loading-logo{
+  font-family:var(--mono);font-size:13px;
+  letter-spacing:.22em;color:var(--t3);
+}
+.loading-bar{
+  width:120px;height:2px;
+  background:var(--border);border-radius:1px;overflow:hidden;
+}
+.loading-bar::after{
+  content:'';display:block;
+  width:40%;height:100%;
+  background:var(--accent);
+  animation:slide 1s ease-in-out infinite;
+}
+@keyframes slide{
+  0%{transform:translateX(-100%)}
+  100%{transform:translateX(350%)}
+}
+
+/* ── HEADER ── */
+.header{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:16px 20px 14px;
+  position:sticky;top:0;z-index:40;
+}
+.hdr-top{
+  display:flex;align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+.logo-row{display:flex;align-items:center;gap:9px;}
+.logo-sq{
+  width:26px;height:26px;
+  background:var(--accent);border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+}
+.logo-sq svg{width:14px;height:14px;fill:var(--yellow);}
+.logo-name{font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.18em;}
+.date-tag{
+  font-family:var(--mono);font-size:11px;
+  color:var(--t2);background:var(--bg);
+  border:1px solid var(--border);
+  padding:4px 10px;border-radius:4px;
+}
+
+/* vendor identity */
+.vendor-identity{
+  background:var(--s2);
+  border-radius:var(--r);
+  padding:14px 16px;
+  display:flex;align-items:center;gap:12px;
+}
+.vi-icon{
+  width:40px;height:40px;flex-shrink:0;
+  background:var(--accent);
+  border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+}
+.vi-name{font-size:16px;font-weight:700;line-height:1.2;}
+.vi-sub{
+  font-family:var(--mono);font-size:11px;
+  color:var(--t3);margin-top:2px;letter-spacing:.05em;
+}
+.vi-count{
+  margin-left:auto;
+  text-align:right;
+}
+.vi-cnt-num{
+  font-family:var(--mono);font-size:22px;
+  font-weight:500;line-height:1;
+  color:var(--accent);
+}
+.vi-cnt-lbl{
+  font-family:var(--mono);font-size:10px;
+  color:var(--t3);letter-spacing:.1em;
+  text-transform:uppercase;margin-top:2px;
+}
+.urgent-bar{
+  display:none;
+  background:var(--r-bg);border:1px solid #e5b0ad;
+  border-radius:6px;padding:8px 14px;margin-top:10px;
+  font-size:12px;color:var(--red);
+  display:flex;align-items:center;gap:7px;
+}
+.urgent-bar.hidden{display:none!important;}
+.urgent-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink .9s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── MAIN ── */
+.main{padding:16px 20px 120px;}
+
+/* date section */
+.date-section{margin-bottom:20px;}
+.ds-label{
+  font-family:var(--mono);font-size:10px;
+  letter-spacing:.15em;text-transform:uppercase;
+  color:var(--t3);margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;
+}
+.ds-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* order card */
+.order-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  margin-bottom:8px;
+  overflow:hidden;
+  box-shadow:0 1px 4px rgba(0,0,0,.04);
+  border-left:3px solid transparent;
+  transition:box-shadow .15s;
+}
+.order-card.p-urgent{border-left-color:var(--red);}
+.order-card.p-normal{border-left-color:var(--yellow);}
+.order-card.p-low{border-left-color:var(--border);}
+.order-card.confirmed{opacity:.5;}
+
+.card-inner{
+  padding:14px 16px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;gap:12px;
+}
+.card-name{font-size:15px;font-weight:600;margin-bottom:3px;line-height:1.3;}
+.card-name.struck{text-decoration:line-through;color:var(--t3);}
+.card-meta{
+  display:flex;align-items:center;gap:8px;
+  flex-wrap:wrap;
+}
+.card-note{font-size:12px;color:var(--t2);margin-top:4px;line-height:1.5;}
+
+.qty-badge{
+  font-family:var(--mono);font-size:20px;font-weight:500;
+  color:var(--text);white-space:nowrap;text-align:right;line-height:1;
+}
+.qty-unit{font-size:12px;color:var(--t3);}
+
+.ptag{
+  font-family:var(--mono);font-size:10px;font-weight:500;
+  padding:2px 7px;border-radius:3px;letter-spacing:.05em;
+}
+.pt-urgent{background:var(--r-bg);color:var(--red);border:1px solid #e0aaa6;}
+.pt-normal{background:var(--y-bg);color:var(--yellow);border:1px solid var(--y-bd);}
+.pt-low{background:var(--s2);color:var(--t3);border:1px solid var(--border);}
+
+.time-tag{
+  font-family:var(--mono);font-size:10px;color:var(--t3);
+}
+
+.confirmed-tag{
+  font-family:var(--mono);font-size:10px;
+  padding:2px 7px;border-radius:3px;
+  background:var(--g-bg);color:var(--green);
+  border:1px solid var(--g-bd);
+}
+
+/* empty */
+.empty{
+  text-align:center;padding:60px 0 40px;
+  color:var(--t3);
+}
+.empty-icon{font-size:36px;margin-bottom:12px;opacity:.4;}
+.empty-txt{font-size:13px;line-height:1.8;}
+
+/* ── CONFIRM FOOTER ── */
+.confirm-footer{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  padding:14px 20px 20px;
+  box-shadow:0 -4px 20px rgba(0,0,0,.06);
+}
+.cf-info{
+  font-size:12px;color:var(--t3);
+  text-align:center;margin-bottom:10px;
+  line-height:1.6;
+}
+.cf-info strong{color:var(--t2);}
+.confirm-btn{
+  width:100%;padding:15px;
+  background:var(--accent);color:var(--inv);
+  border:none;border-radius:var(--r);
+  font-family:var(--font);font-size:15px;font-weight:700;
+  cursor:pointer;letter-spacing:.04em;
+  transition:opacity .15s, transform .1s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.confirm-btn:active{transform:scale(.99);}
+.confirm-btn:disabled{opacity:.4;cursor:not-allowed;}
+.confirm-btn.done{background:var(--green);}
+
+/* ── CONFIRMED STATE ── */
+.confirmed-banner{
+  background:var(--g-bg);
+  border:1px solid var(--g-bd);
+  border-radius:var(--r);
+  padding:14px 16px;
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:16px;
+  animation:fadeIn .3s ease;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.cb-icon{font-size:20px;}
+.cb-text{font-size:13px;color:var(--green);font-weight:500;line-height:1.5;}
+.cb-time{font-family:var(--mono);font-size:11px;color:var(--t3);margin-top:1px;}
+
+/* ── NO ORDERS ── */
+.no-orders-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:32px 20px;
+  text-align:center;
+  margin-top:20px;
+}
+.no-orders-icon{font-size:32px;margin-bottom:12px;opacity:.5;}
+.no-orders-title{font-size:15px;font-weight:600;margin-bottom:6px;}
+.no-orders-sub{font-size:13px;color:var(--t3);line-height:1.7;}
+
+/* ── SYNC INFO ── */
+.sync-row{
+  display:flex;align-items:center;justify-content:center;
+  gap:6px;font-family:var(--mono);font-size:11px;
+  color:var(--t3);padding:12px 0 4px;
+}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--t3);}
+.sdot.ok{background:var(--green);}
+.sdot.err{background:var(--red);}
+
+/* ── ERROR SCREEN ── */
+#error-screen{
+  display:none;
+  min-height:100vh;
+  align-items:center;justify-content:center;
+  flex-direction:column;gap:12px;
+  padding:40px;text-align:center;
+}
+#error-screen.show{display:flex;}
+.err-icon{font-size:40px;margin-bottom:8px;}
+.err-title{font-size:17px;font-weight:700;}
+.err-sub{font-size:13px;color:var(--t2);line-height:1.7;max-width:300px;}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--bdk);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="loading-logo">WORKNIC</div>
+  <div class="loading-bar"></div>
+</div>
+
+<!-- ERROR -->
+<div id="error-screen">
+  <div class="err-icon">⚠️</div>
+  <div class="err-title">페이지를 불러올 수 없습니다</div>
+  <div class="err-sub" id="err-msg">URL이 올바른지 확인하거나 워크닉 매장에 문의해주세요.</div>
+</div>
+
+<!-- HEADER -->
+<header class="header" id="main-header" style="display:none;">
+  <div class="hdr-top">
+    <div class="logo-row">
+      <div class="logo-sq">
+        <svg viewBox="0 0 14 14"><rect x="0" y="0" width="6" height="6" rx="1"/><rect x="8" y="0" width="6" height="6" rx="1"/><rect x="0" y="8" width="6" height="6" rx="1"/><rect x="8" y="8" width="6" height="6" rx="1"/></svg>
+      </div>
+      <span class="logo-name">WORKNIC</span>
+    </div>
+    <div class="date-tag" id="date-tag">—</div>
+  </div>
+  <div class="vendor-identity">
+    <div class="vi-icon" id="vi-icon">🏪</div>
+    <div>
+      <div class="vi-name" id="vi-name">—</div>
+      <div class="vi-sub">발주 요청 목록</div>
+    </div>
+    <div class="vi-count">
+      <div class="vi-cnt-num" id="vi-cnt">0</div>
+      <div class="vi-cnt-lbl">품목</div>
+    </div>
+  </div>
+  <div class="urgent-bar hidden" id="urgent-bar">
+    <span class="urgent-dot"></span>
+    <span id="urgent-txt">긴급 항목이 있습니다</span>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main" id="main-content" style="display:none;">
+  <!-- confirmed banner (조건부) -->
+  <div class="confirmed-banner" id="confirmed-banner" style="display:none;">
+    <div class="cb-icon">✅</div>
+    <div>
+      <div class="cb-text">수신 확인 완료</div>
+      <div class="cb-time" id="confirmed-time">—</div>
+    </div>
+  </div>
+
+  <div id="order-list"></div>
+
+  <div class="sync-row">
+    <div class="sdot" id="sdot"></div>
+    <span id="sync-txt">—</span>
+  </div>
+</main>
+
+<!-- CONFIRM FOOTER -->
+<div class="confirm-footer" id="confirm-footer" style="display:none;">
+  <div class="cf-info" id="cf-info">
+    오늘 발주 목록을 확인하셨나요?<br>
+    <strong>수신 확인</strong> 버튼을 눌러주세요.
+  </div>
+  <button class="confirm-btn" id="confirm-btn" onclick="confirmReceipt()">
+    <span id="confirm-btn-text">✓ 수신 확인</span>
+  </button>
+</div>
+
+<script>
+// ════════════════════════════════
+//  URL 파라미터에서 거래처 + 스크립트 URL 읽기
+//  사용법: vendor_view.html?vendor=성연공구&url=SCRIPT_URL
+// ════════════════════════════════
+const params     = new URLSearchParams(location.search);
+const VENDOR_ID  = params.get('vendor') || '';
+const SCRIPT_URL = decodeURIComponent(params.get('url') || '');
+
+const CONFIRM_KEY = `wn_confirmed_${VENDOR_ID}`;
+
+const VENDOR_META = {
+  '성연공구':    { icon:'🔧', tel:'010-3738-6890' },
+  '영남철물':    { icon:'🪛', tel:'010-4534-5998' },
+  '천도전기':    { icon:'⚡', tel:'010-2965-8216' },
+  '일신비츠온':  { icon:'🔩', tel:'010-8290-8534' },
+  '영진하이테크':{ icon:'⚙️', tel:'031-529-9005'  },
+  '배관자재':    { icon:'🚿', tel:'010-2810-2540' },
+  '기타주문':    { icon:'📦', tel:''               },
+};
+
+let allItems = [];
+let confirmed = false;
+
+// ── INIT ──
+window.onload = async () => {
+  updateDateTag();
+
+  if (!VENDOR_ID || !SCRIPT_URL) {
+    showError('URL에 거래처 정보가 없습니다.<br>워크닉 매장에서 받은 링크를 사용해주세요.');
+    return;
+  }
+
+  await loadData();
+};
+
+// ── DATE ──
+function updateDateTag() {
+  const d = new Date();
+  const s = d.getFullYear() + '.' +
+    String(d.getMonth()+1).padStart(2,'0') + '.' +
+    String(d.getDate()).padStart(2,'0') + ' (' + ['일','월','화','수','목','금','토'][d.getDay()] + ')';
+  document.getElementById('date-tag').textContent = s;
+}
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0');
+}
+
+// ── LOAD ──
+async function loadData() {
+  try {
+    const res  = await fetch(SCRIPT_URL + '?t=' + Date.now());
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    allItems = (data.items || [])
+      .map(r => ({
+        id:        String(r['ID']||''),
+        name:      r['상품명']||'',
+        qty:       r['수량']||'',
+        unit:      r['단위']||'개',
+        priority:  r['긴급도']||'normal',
+        vendor:    r['거래처']||'',
+        note:      r['메모']||'',
+        status:    r['상태']||'waiting',
+        date:      r['날짜']||'',
+        createdAt: r['입력시각']||'',
+      }))
+      .filter(i =>
+        i.vendor === VENDOR_ID &&
+        i.status === 'waiting' &&
+        i.date === todayStr()
+      );
+
+    setSyncState('ok', '방금 업데이트');
+    render();
+    checkConfirmState();
+
+  } catch(e) {
+    setSyncState('err', '연결 실패');
+    if (allItems.length === 0) {
+      showError('데이터를 불러오지 못했습니다.<br>' + e.message);
+      return;
+    }
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('main-header').style.display = 'block';
+  document.getElementById('main-content').style.display = 'block';
+  document.getElementById('confirm-footer').style.display = 'block';
+}
+
+// ── RENDER ──
+function render() {
+  const meta = VENDOR_META[VENDOR_ID] || { icon:'🏪', tel:'' };
+  document.getElementById('vi-icon').textContent = meta.icon;
+  document.getElementById('vi-name').textContent = VENDOR_ID;
+  document.getElementById('vi-cnt').textContent  = allItems.length;
+
+  const urgentItems = allItems.filter(i => i.priority === 'urgent');
+  const urgentBar   = document.getElementById('urgent-bar');
+  if (urgentItems.length > 0) {
+    urgentBar.classList.remove('hidden');
+    document.getElementById('urgent-txt').textContent =
+      `긴급 ${urgentItems.length}건 포함되어 있습니다`;
+  } else {
+    urgentBar.classList.add('hidden');
+  }
+
+  const list = document.getElementById('order-list');
+
+  if (allItems.length === 0) {
+    list.innerHTML = `
+      <div class="no-orders-card">
+        <div class="no-orders-icon">📭</div>
+        <div class="no-orders-title">오늘 발주 요청이 없습니다</div>
+        <div class="no-orders-sub">워크닉 매장에서 발주 요청이 등록되면<br>이 페이지에 표시됩니다.</div>
+      </div>`;
+    document.getElementById('cf-info').textContent = '오늘은 발주 요청이 없습니다.';
+    document.getElementById('confirm-btn').disabled = true;
+    return;
+  }
+
+  // 긴급 먼저 정렬
+  const sorted = [...allItems].sort((a,b) => {
+    const order = { urgent:0, normal:1, low:2 };
+    return (order[a.priority]||1) - (order[b.priority]||1);
+  });
+
+  list.innerHTML = `
+    <div class="date-section">
+      <div class="ds-label">${todayStr().replace(/-/g,'.')} 발주 요청 목록</div>
+      ${sorted.map(item => `
+        <div class="order-card p-${item.priority}" id="card-${item.id}">
+          <div class="card-inner">
+            <div>
+              <div class="card-name" id="cname-${item.id}">${esc(item.name)}</div>
+              <div class="card-meta">
+                <span class="ptag pt-${item.priority}">${pl(item.priority)}</span>
+                <span class="time-tag">${fmtTime(item.createdAt)}</span>
+              </div>
+              ${item.note ? `<div class="card-note">${esc(item.note)}</div>` : ''}
+            </div>
+            <div style="text-align:right;">
+              <div class="qty-badge">${item.qty}<span class="qty-unit"> ${esc(item.unit)}</span></div>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+
+  document.getElementById('cf-info').innerHTML =
+    `총 <strong>${allItems.length}건</strong>의 발주 요청입니다.<br>확인 후 수신 확인 버튼을 눌러주세요.`;
+}
+
+// ── CONFIRM ──
+function checkConfirmState() {
+  const saved = localStorage.getItem(CONFIRM_KEY);
+  if (!saved) return;
+
+  const { date, time } = JSON.parse(saved);
+  if (date !== todayStr()) {
+    localStorage.removeItem(CONFIRM_KEY);
+    return;
+  }
+
+  // 이미 오늘 확인함
+  setConfirmedUI(time);
+}
+
+async function confirmReceipt() {
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled = true;
+  document.getElementById('confirm-btn-text').textContent = '처리 중…';
+
+  const now     = new Date();
+  const timeStr = now.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit', hour12:true });
+  const isoStr  = now.toISOString();
+
+  // 서버에 수신 확인 기록
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action:   'vendorConfirm',
+        vendor:   VENDOR_ID,
+        date:     todayStr(),
+        confirmedAt: isoStr,
+        itemCount: allItems.length
+      })
+    });
+  } catch(e) {
+    // 서버 실패해도 로컬에는 저장
+  }
+
+  // 로컬 저장
+  localStorage.setItem(CONFIRM_KEY, JSON.stringify({
+    date: todayStr(), time: timeStr
+  }));
+
+  setConfirmedUI(timeStr);
+}
+
+function setConfirmedUI(timeStr) {
+  confirmed = true;
+
+  // 배너 표시
+  const banner = document.getElementById('confirmed-banner');
+  banner.style.display = 'flex';
+  document.getElementById('confirmed-time').textContent = `확인 시각: ${timeStr}`;
+
+  // 모든 카드 스타일 변경
+  allItems.forEach(item => {
+    const card  = document.getElementById('card-' + item.id);
+    const cname = document.getElementById('cname-' + item.id);
+    if (card)  card.classList.add('confirmed');
+    if (cname) cname.classList.add('struck');
+  });
+
+  // 버튼 변경
+  const btn = document.getElementById('confirm-btn');
+  btn.classList.add('done');
+  btn.disabled = false;
+  document.getElementById('confirm-btn-text').textContent = '✓ 수신 확인 완료';
+  document.getElementById('cf-info').innerHTML =
+    `<strong style="color:var(--green);">${timeStr}</strong>에 수신 확인하셨습니다.`;
+}
+
+// ── ERROR ──
+function showError(msg) {
+  document.getElementById('loading').style.display = 'none';
+  const es = document.getElementById('error-screen');
+  es.classList.add('show');
+  document.getElementById('err-msg').innerHTML = msg;
+}
+
+// ── SYNC STATE ──
+function setSyncState(state, msg) {
+  const dot = document.getElementById('sdot');
+  dot.className = 'sdot ' + state;
+  document.getElementById('sync-txt').textContent = msg;
+}
+
+// ── UTILS ──
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtTime(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d)) return '';
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function pl(p){ return p==='urgent'?'긴급':p==='normal'?'일반':'여유'; }
+</script>
+</body>
+</html>
