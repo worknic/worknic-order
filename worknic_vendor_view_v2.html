@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>WORKNIC — 발주 확인</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#F6F5F1;--surface:#FFFFFF;--s2:#EEEDE9;--border:#E0DED8;--bdk:#C8C6BF;
+  --text:#17161A;--t2:#56534C;--t3:#9A9890;--inv:#FFFFFF;
+  --yellow:#C4930A;--y-bg:#FDF6E0;--y-bd:#DDB930;
+  --red:#B33030;--r-bg:#FDF0EF;
+  --green:#1E6B47;--g-bg:#EBF7F2;--g-bd:#85C9A8;
+  --r:8px;--font:'Noto Sans KR',sans-serif;--mono:'DM Mono',monospace;
+}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;min-height:100vh;-webkit-font-smoothing:antialiased;}
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px;}
+.loading-logo{font-family:var(--mono);font-size:13px;letter-spacing:.22em;color:var(--t3);}
+.loading-bar{width:120px;height:2px;background:var(--border);border-radius:1px;overflow:hidden;}
+.loading-bar::after{content:'';display:block;width:40%;height:100%;background:var(--text);animation:slide 1s ease-in-out infinite;}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+#error-screen{display:none;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:40px;text-align:center;}
+#error-screen.show{display:flex;}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px 14px;position:sticky;top:0;z-index:40;}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.logo-row{display:flex;align-items:center;gap:9px;}
+.logo-sq{width:26px;height:26px;background:var(--text);border-radius:4px;display:flex;align-items:center;justify-content:center;}
+.logo-sq svg{width:14px;height:14px;fill:var(--yellow);}
+.logo-name{font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.18em;}
+.date-tag{font-family:var(--mono);font-size:11px;color:var(--t2);background:var(--bg);border:1px solid var(--border);padding:4px 10px;border-radius:4px;}
+.vendor-identity{background:var(--s2);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;}
+.vi-icon{width:40px;height:40px;flex-shrink:0;background:var(--text);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.vi-name{font-size:16px;font-weight:700;}
+.vi-sub{font-family:var(--mono);font-size:11px;color:var(--t3);margin-top:2px;}
+.vi-count{margin-left:auto;text-align:right;}
+.vi-cnt-num{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--text);}
+.vi-cnt-lbl{font-family:var(--mono);font-size:10px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;}
+.urgent-bar{display:none;background:var(--r-bg);border:1px solid #e5b0ad;border-radius:6px;padding:8px 14px;margin-top:10px;font-size:12px;color:var(--red);align-items:center;gap:7px;}
+.urgent-bar.show{display:flex;}
+.urgent-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink .9s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.main{padding:16px 20px 140px;}
+.ds-label{font-family:var(--mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--t3);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.ds-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.order-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04);border-left:3px solid transparent;}
+.order-card.p-urgent{border-left-color:var(--red);}
+.order-card.p-normal{border-left-color:var(--yellow);}
+.order-card.p-low{border-left-color:var(--border);}
+.card-inner{padding:14px 16px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;}
+.card-name{font-size:15px;font-weight:600;margin-bottom:3px;line-height:1.3;}
+.card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.card-note{font-size:12px;color:var(--t2);margin-top:4px;line-height:1.5;}
+.qty-badge{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--text);white-space:nowrap;text-align:right;}
+.qty-unit{font-size:12px;color:var(--t3);}
+.ptag{font-family:var(--mono);font-size:10px;font-weight:500;padding:2px 7px;border-radius:3px;letter-spacing:.05em;}
+.pt-urgent{background:var(--r-bg);color:var(--red);border:1px solid #e0aaa6;}
+.pt-normal{background:var(--y-bg);color:var(--yellow);border:1px solid var(--y-bd);}
+.pt-low{background:var(--s2);color:var(--t3);border:1px solid var(--border);}
+.time-tag{font-family:var(--mono);font-size:10px;color:var(--t3);}
+.no-orders-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:32px 20px;text-align:center;margin-top:20px;}
+.no-orders-icon{font-size:32px;margin-bottom:12px;opacity:.5;}
+.no-orders-title{font-size:15px;font-weight:600;margin-bottom:6px;}
+.no-orders-sub{font-size:13px;color:var(--t3);line-height:1.7;}
+.confirm-footer{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:14px 20px 24px;box-shadow:0 -4px 20px rgba(0,0,0,.06);}
+.cf-info{font-size:12px;color:var(--t3);text-align:center;margin-bottom:10px;line-height:1.6;}
+.cf-info strong{color:var(--t2);}
+.confirm-btn{width:100%;padding:16px;background:var(--text);color:var(--inv);border:none;border-radius:var(--r);font-family:var(--font);font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.04em;transition:opacity .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.confirm-btn:active{transform:scale(.99);}
+.confirm-btn:disabled{opacity:.35;cursor:not-allowed;}
+.confirm-btn.done{background:var(--green);}
+.confirmed-banner{background:var(--g-bg);border:1px solid var(--g-bd);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:10px;margin-bottom:16px;animation:fadeIn .3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.cb-text{font-size:13px;color:var(--green);font-weight:500;line-height:1.5;}
+.cb-time{font-family:var(--mono);font-size:11px;color:var(--t3);margin-top:1px;}
+.sync-row{display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--t3);padding:12px 0;}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--t3);}
+.sdot.ok{background:var(--green);}
+.sdot.err{background:var(--red);}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="loading-logo">WORKNIC</div><div class="loading-bar"></div></div>
+
+<div id="error-screen">
+  <div style="font-size:40px;margin-bottom:8px;">⚠️</div>
+  <div style="font-size:17px;font-weight:700;">페이지를 불러올 수 없습니다</div>
+  <div style="font-size:13px;color:var(--t2);line-height:1.7;max-width:300px;margin-top:8px;" id="err-msg"></div>
+</div>
+
+<header class="header" id="main-header" style="display:none;">
+  <div class="hdr-top">
+    <div class="logo-row">
+      <div class="logo-sq"><svg viewBox="0 0 14 14"><rect x="0" y="0" width="6" height="6" rx="1"/><rect x="8" y="0" width="6" height="6" rx="1"/><rect x="0" y="8" width="6" height="6" rx="1"/><rect x="8" y="8" width="6" height="6" rx="1"/></svg></div>
+      <span class="logo-name">WORKNIC</span>
+    </div>
+    <div class="date-tag" id="date-tag">—</div>
+  </div>
+  <div class="vendor-identity">
+    <div class="vi-icon" id="vi-icon">🏪</div>
+    <div><div class="vi-name" id="vi-name">—</div><div class="vi-sub">발주 요청 목록</div></div>
+    <div class="vi-count"><div class="vi-cnt-num" id="vi-cnt">0</div><div class="vi-cnt-lbl">품목</div></div>
+  </div>
+  <div class="urgent-bar" id="urgent-bar">
+    <span class="urgent-dot"></span><span id="urgent-txt">긴급 항목이 있습니다</span>
+  </div>
+</header>
+
+<main class="main" id="main-content" style="display:none;">
+  <div class="confirmed-banner" id="confirmed-banner" style="display:none;">
+    <div style="font-size:20px;">✅</div>
+    <div><div class="cb-text">수신 확인 완료 — 발주 처리됩니다</div><div class="cb-time" id="confirmed-time">—</div></div>
+  </div>
+  <div id="order-list"></div>
+  <div class="sync-row"><div class="sdot" id="sdot"></div><span id="sync-txt">—</span></div>
+</main>
+
+<div class="confirm-footer" id="confirm-footer" style="display:none;">
+  <div class="cf-info" id="cf-info">오늘 발주 목록을 확인하셨나요?<br><strong>수신 확인 시 자동으로 발주 완료 처리됩니다.</strong></div>
+  <button class="confirm-btn" id="confirm-btn" onclick="confirmReceipt()">
+    <span id="confirm-btn-text">✓ 수신 확인 (발주 완료)</span>
+  </button>
+</div>
+
+<script>
+const params     = new URLSearchParams(location.search);
+const VENDOR_ID  = params.get('vendor') || '';
+const SCRIPT_URL = decodeURIComponent(params.get('url') || '');
+const CONFIRM_KEY= 'wn_v5_confirmed_' + VENDOR_ID;
+const VENDOR_META= { '성연공구':'🔧','영남철물':'🪛','천도전기':'⚡','일신비츠온':'🔩','영진하이테크':'⚙️','배관자재':'🚿','기타주문':'📦' };
+let allItems = [];
+
+window.onload = async () => {
+  updateDateTag();
+  if (!VENDOR_ID || !SCRIPT_URL) { showError('URL에 거래처 정보가 없습니다.<br>워크닉 매장에서 받은 링크를 사용해주세요.'); return; }
+  await loadData();
+};
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function updateDateTag() {
+  const d = new Date();
+  const days=['일','월','화','수','목','금','토'];
+  document.getElementById('date-tag').textContent =
+    d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0')+' ('+days[d.getDay()]+')';
+}
+
+async function loadData() {
+  try {
+    const res  = await fetch(SCRIPT_URL + '?t=' + Date.now());
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    const today = todayStr();
+    allItems = (data.items||[])
+      .map(r => ({
+        id:       String(r['ID']||''),
+        name:     r['상품명']||'',
+        qty:      r['수량']||'',
+        unit:     r['단위']||'개',
+        priority: r['긴급도']||'normal',
+        vendor:   r['거래처']||'',
+        note:     r['메모']||'',
+        status:   r['상태']||'waiting',
+        date:     String(r['날짜']||'').trim(),
+        createdAt:r['입력시각']||'',
+      }))
+      .filter(i => i.vendor===VENDOR_ID && i.status==='waiting' && i.date===today);
+
+    setSyncState('ok','방금 업데이트');
+    render();
+    checkConfirmState();
+  } catch(e) {
+    setSyncState('err','연결 실패');
+    if (!allItems.length) { showError('데이터를 불러오지 못했습니다.<br>'+e.message); return; }
+  }
+  ['loading'].forEach(id => document.getElementById(id).style.display='none');
+  ['main-header','main-content','confirm-footer'].forEach(id => document.getElementById(id).style.display='block');
+}
+
+function render() {
+  document.getElementById('vi-icon').textContent = VENDOR_META[VENDOR_ID]||'🏪';
+  document.getElementById('vi-name').textContent = VENDOR_ID;
+  document.getElementById('vi-cnt').textContent  = allItems.length;
+
+  const urgent = allItems.filter(i=>i.priority==='urgent');
+  if (urgent.length>0) {
+    document.getElementById('urgent-bar').classList.add('show');
+    document.getElementById('urgent-txt').textContent = '긴급 '+urgent.length+'건 포함';
+  }
+
+  const list = document.getElementById('order-list');
+  if (!allItems.length) {
+    list.innerHTML = `<div class="no-orders-card"><div class="no-orders-icon">📭</div><div class="no-orders-title">오늘 발주 요청이 없습니다</div><div class="no-orders-sub">워크닉 매장에서 발주 요청이 등록되면<br>이 페이지에 표시됩니다.</div></div>`;
+    document.getElementById('cf-info').textContent='오늘은 발주 요청이 없습니다.';
+    document.getElementById('confirm-btn').disabled=true;
+    return;
+  }
+
+  const sorted = [...allItems].sort((a,b)=>({urgent:0,normal:1,low:2}[a.priority]||1)-({urgent:0,normal:1,low:2}[b.priority]||1));
+  list.innerHTML = `<div><div class="ds-label">${todayStr().replace(/-/g,'.')} 발주 요청 목록</div>
+    ${sorted.map(item=>`
+      <div class="order-card p-${item.priority}">
+        <div class="card-inner">
+          <div>
+            <div class="card-name">${esc(item.name)}</div>
+            <div class="card-meta"><span class="ptag pt-${item.priority}">${pl(item.priority)}</span><span class="time-tag">${fmtTime(item.createdAt)}</span></div>
+            ${item.note?`<div class="card-note">${esc(item.note)}</div>`:''}
+          </div>
+          <div style="text-align:right;"><div class="qty-badge">${item.qty}<span class="qty-unit"> ${esc(item.unit)}</span></div></div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+
+  document.getElementById('cf-info').innerHTML =
+    `총 <strong>${allItems.length}건</strong>의 발주 요청입니다.<br><strong style="color:#B33030;">수신 확인 시 자동으로 발주 완료 처리됩니다.</strong>`;
+}
+
+function checkConfirmState() {
+  const saved = localStorage.getItem(CONFIRM_KEY);
+  if (!saved) return;
+  const { date, time } = JSON.parse(saved);
+  if (date!==todayStr()) { localStorage.removeItem(CONFIRM_KEY); return; }
+  setConfirmedUI(time);
+}
+
+async function confirmReceipt() {
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled=true;
+  document.getElementById('confirm-btn-text').textContent='처리 중…';
+  const now=new Date();
+  const timeStr=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:true});
+  try {
+    await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({
+      action:'vendorConfirmComplete', vendor:VENDOR_ID,
+      ids:allItems.map(i=>i.id), confirmedAt:now.toISOString(), date:todayStr()
+    })});
+  } catch(e){}
+  localStorage.setItem(CONFIRM_KEY,JSON.stringify({date:todayStr(),time:timeStr}));
+  setConfirmedUI(timeStr);
+}
+
+function setConfirmedUI(timeStr) {
+  document.getElementById('confirmed-banner').style.display='flex';
+  document.getElementById('confirmed-time').textContent='확인 시각: '+timeStr+' — 발주 완료 처리됨';
+  const btn=document.getElementById('confirm-btn');
+  btn.classList.add('done'); btn.disabled=false;
+  document.getElementById('confirm-btn-text').textContent='✓ 수신 확인 완료';
+  document.getElementById('cf-info').innerHTML='<strong style="color:var(--green);">'+timeStr+'</strong>에 수신 확인 완료 — 발주 처리되었습니다.';
+}
+
+function showError(msg) { document.getElementById('loading').style.display='none'; document.getElementById('error-screen').classList.add('show'); document.getElementById('err-msg').innerHTML=msg; }
+function setSyncState(s,m){document.getElementById('sdot').className='sdot '+s;document.getElementById('sync-txt').textContent=m;}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtTime(iso){if(!iso)return '';const d=new Date(iso);if(isNaN(d))return '';return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function pl(p){return p==='urgent'?'긴급':p==='normal'?'일반':'여유';}
+</script>
+</body>
+</html>
